@@ -15,7 +15,7 @@ It's big funny.that's not I want.
 
 I think the future,we must live for attraction!
 
-we have so many greate advantage for free our body.
+we have so many great advantage for free our body.
 but we still have little advantage for free our mind.
 
 we build super cities,but city slave us.
