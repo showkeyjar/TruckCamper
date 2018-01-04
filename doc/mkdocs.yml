@@ -1,0 +1,11 @@
+site_name: Open Source Truk Camper
+
+pages:
+- 'index.md'
+- 'Overview.md'
+- 'Solution.md'
+- 'Design.md'
+- 'System.md'
+- 'Service.md'
+- 'Module.md'
+- 'HowTo.md'
