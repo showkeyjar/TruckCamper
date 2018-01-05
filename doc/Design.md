@@ -4,6 +4,9 @@ todo:use blender to design.
 
 Blender design file:[T1](design/t1.blend)
 
+### My tentative idea
+(sorry just chinese version)
+
 1.房车的舱壁可折叠，这样可以获取更大的空间，使得空间满足人们日常生活的需要；
 
 折叠方式:中部向左右两侧外部隆起，确保车厢内空间能满足一个人日常生活基本舒适度所需的空间15-20m*m
@@ -39,3 +42,7 @@ Blender design file:[T1](design/t1.blend)
 
 安全是人类隐私的屏障，只有在足够安全的体系下，人们才会在心理上完全放松下来。
 入侵检测系统、主动防御系统，是车主人身安全的有力保障。
+
+### Structure
+
+Core Control System
