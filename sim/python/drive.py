@@ -1,3 +1,6 @@
+#! /usr/bin/python
+# coding=utf-8
+
 import argparse
 import base64
 from datetime import datetime
@@ -12,9 +15,76 @@ from PIL import Image
 from flask import Flask
 from io import BytesIO
 
-from keras.models import load_model
-import h5py
-from keras import __version__ as keras_version
+import pidcontroller
+from lane_lines import *
+
+krate_sum=[ 0 for i in range(10) ]
+
+def stage_detect(image_in):
+    image = filter_colors(image_in)
+    gray = grayscale(image)
+    blur_gray = gaussian_blur(gray, kernel_size)
+    edges = canny(blur_gray, low_threshold, high_threshold)
+
+    imshape = image.shape
+    vertices = np.array([[\
+        ((imshape[1] * (1 - trap_bottom_width)) // 2, imshape[0]),\
+        ((imshape[1] * (1 - trap_top_width)) // 2, imshape[0] - imshape[0] * trap_height),\
+        (imshape[1] - (imshape[1] * (1 - trap_top_width)) // 2, imshape[0] - imshape[0] * trap_height),\
+        (imshape[1] - (imshape[1] * (1 - trap_bottom_width)) // 2, imshape[0])]]\
+        , dtype=np.int32)
+    masked_edges = region_of_interest(edges, vertices)
+
+    img = masked_edges
+    min_line_len = min_line_length
+    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
+    if lines is None:
+        return None
+    line_img = np.zeros((*img.shape, 3), dtype=np.uint8)  # 3-channel RGB image
+    newlines = draw_lines(line_img, lines)
+
+    for line in newlines:
+        if line[1] < line[3]:
+            line[0], line[1], line[2], line[3] = line[2], line[3], line[0], line[1]
+    if newlines[0][0] > newlines[1][0]:
+        newlines[0], newlines[1] = newlines[1], newlines[0]
+    return(newlines)
+
+def krate(line):
+    # compute the sign of the slop of the line
+    rate=0
+    try:
+        rate = (line[0] - line[2]) / (line[1] - line[3])
+    except:
+        rate = 0
+    return round(rate, 4)
+
+def kratesum(lines):
+    global krate_sum
+    rsum = krate(lines[0]) + krate(lines[1])
+    krate_sum.pop(0)
+    krate_sum.append(rsum)
+    result=np.mean(krate_sum)
+    return(result)
+
+last_left_rate=0
+last_right_rate=0
+
+def kratesum1(lines):
+    global last_left_rate,last_right_rate
+    sum=0
+    if lines[0] is not None:
+        last_left_rate = krate(lines[0])
+        if lines[1] is None:
+            if last_left_rate<1:
+                last_right_rate=last_left_rate
+    if lines[1] is not None:
+        last_right_rate = krate(lines[1])
+        if lines[0] is None:
+            if last_right_rate>-1:
+                last_left_rate=last_right_rate
+    sum=last_left_rate+last_right_rate
+    return sum
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -46,7 +116,10 @@ class SimplePIController:
 controller = SimplePIController(0.1, 0.002)
 set_speed = 9
 controller.set_desired(set_speed)
-
+target_direction=0
+angle_controller = SimplePIController(0.1, 0.002)
+angle_controller.set_desired(target_direction)
+#angle_controller = pidcontroller.PID(0.1, 0.002, 0.001)
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -62,11 +135,16 @@ def telemetry(sid, data):
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
         #steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
-        steering_angle=0.1
+        lines=stage_detect(image_array)
+        current_direction = kratesum1(lines)
+        steering_angle = angle_controller.update(current_direction)
+        #error = target_direction - current_direction
+        #steering_angle = angle_controller.Update(error)
 
+        #print('Setting the angle to %f' % correction)
+        #steering_angle=0.1
         throttle = controller.update(float(speed))
-
-        print(steering_angle, throttle)
+        print(steering_angle)
         send_control(steering_angle, throttle)
 
         # save frame
