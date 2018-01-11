@@ -64,7 +64,7 @@ def kratesum(lines):
     rsum = krate(lines[0]) + krate(lines[1])
     krate_sum.pop(0)
     krate_sum.append(rsum)
-    result=np.mean(krate_sum)
+    result=np.average(krate_sum)
     return(result)
 
 last_left_rate=0
@@ -73,16 +73,17 @@ last_right_rate=0
 def kratesum1(lines):
     global last_left_rate,last_right_rate
     sum=0
-    if lines[0] is not None:
-        last_left_rate = krate(lines[0])
-        if lines[1] is None:
-            if last_left_rate<1:
-                last_right_rate=last_left_rate
-    if lines[1] is not None:
-        last_right_rate = krate(lines[1])
-        if lines[0] is None:
-            if last_right_rate>-1:
-                last_left_rate=last_right_rate
+    if lines is not None:
+        if lines[0] is not None:
+            last_left_rate = krate(lines[0])
+            if lines[1] is None:
+                if last_left_rate<1:
+                    last_right_rate=last_left_rate
+        if lines[1] is not None:
+            last_right_rate = krate(lines[1])
+            if lines[0] is None:
+                if last_right_rate>-1:
+                    last_left_rate=last_right_rate
     sum=last_left_rate+last_right_rate
     return sum
 
@@ -117,7 +118,7 @@ controller = SimplePIController(0.1, 0.002)
 set_speed = 9
 controller.set_desired(set_speed)
 target_direction=0
-angle_controller = SimplePIController(0.1, 0.002)
+angle_controller = SimplePIController(0.01, 0.001)
 angle_controller.set_desired(target_direction)
 #angle_controller = pidcontroller.PID(0.1, 0.002, 0.001)
 
@@ -136,7 +137,7 @@ def telemetry(sid, data):
         image_array = np.asarray(image)
         #steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
         lines=stage_detect(image_array)
-        current_direction = kratesum1(lines)
+        current_direction = kratesum(lines)
         steering_angle = angle_controller.update(current_direction)
         #error = target_direction - current_direction
         #steering_angle = angle_controller.Update(error)
